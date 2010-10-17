@@ -1,298 +1,245 @@
 import re
+from string import ascii_uppercase
 
 ###################################################################################################
 
-PLUGIN_TITLE               = 'TED talks'
-VIDEO_PREFIX              = '/video/TED'
+PLUGIN_TITLE     = "TED talks"
+VIDEO_PREFIX     = "/video/TED"
 
-TED_BASE        ="http://www.ted.com"
-TED_TALKS       ="http://www.ted.com/talks"
-TED_THEMES      ="http://www.ted.com/themes/atoz"
-TED_TAGS        ="http://www.ted.com/talks/tags"
-TED_SPEAKERS    ="http://www.ted.com/speakers/atoz/page1"
+TED_BASE         = "http://www.ted.com"
+TED_TALKS_FILTER = "http://www.ted.com/talks/searchRpc?tagid=%d&orderedby=%s"
+TED_THEMES       = "http://www.ted.com/themes/atoz"
+TED_TAGS         = "http://www.ted.com/talks/tags"
+TED_SPEAKERS     = "http://www.ted.com/speakers/atoz/page/%d"
+
+MEDIA_NS         = {'media':'http://search.yahoo.com/mrss/'}
 
 # Default artwork and icon(s)
-TEDart             = 'art-default.jpg'
-TEDthumb        = 'icon-default.jpg'
-
+TED_ART          = "art-default.jpg"
+TED_THUMB        = "icon-default.jpg"
 
 ###################################################################################################
+
 def Start():
-  Plugin.AddPrefixHandler(VIDEO_PREFIX, VideoMainMenu, 'TED Talks',TEDthumb,TEDart)
+  Plugin.AddPrefixHandler(VIDEO_PREFIX, VideoMainMenu, PLUGIN_TITLE, TED_THUMB, TED_ART)
   Plugin.AddViewGroup("InfoList", viewMode="InfoList", mediaType="items")
   Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
-  
-  MediaContainer.art        =R(TEDart)
-  MediaContainer.title1     =PLUGIN_TITLE
-  DirectoryItem.thumb       =R(TEDthumb)
 
-  
+  MediaContainer.art       = R(TED_ART)
+  MediaContainer.title1    = PLUGIN_TITLE
+  MediaContainer.viewGroup = "InfoList"
+  DirectoryItem.thumb      = R(TED_THUMB)
+
+  HTTP.CacheTime = CACHE_1DAY
+  HTTP.Headers['User-agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.10) Gecko/20100914 Firefox/3.6.10"
+
 ####################################################################################################
 
 def VideoMainMenu():
-    dir = MediaContainer(mediaType='video') 
-    dir.Append(Function(DirectoryItem(FrontPageList, "Front Page"), pageUrl = TED_BASE))
-    dir.Append(Function(DirectoryItem(ThemeList, "Themes"), pageUrl = TED_THEMES))
-    dir.Append(Function(DirectoryItem(TagsList, "Tags"), pageUrl = TED_TAGS))
-    dir.Append(Function(DirectoryItem(SpeakersList, "Speakers"), pageUrl = TED_SPEAKERS))
-    
-    return dir
-####################################################################################################
+  dir = MediaContainer(viewGroup="List")
 
-def SpeakersList(sender,pageUrl):
-   
-    dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
-    
-    content = HTML.ElementFromURL(pageUrl)
-    page=HTTP.Request(pageUrl)
+  dir.Append(Function(DirectoryItem(FrontPageList, "Front Page")))
+  dir.Append(Function(DirectoryItem(ThemeList, "Themes")))
+  dir.Append(Function(DirectoryItem(TagsList, "Tags")))
+  dir.Append(Function(DirectoryItem(SpeakersAZ, "Speakers")))
 
-    
-    for speakers in content.xpath('//div[@id="maincontent"]/div/div/div/ul/li/a'):
-        #Log(tags)
-        speakerurl=TED_BASE+speakers.get('href')
-        speakername=speakers.text
-        fname=speakername.split(" ")[0]
-        lname=speakername.split(" ")[1]
-        if fname=="":
-          speakername=lname
-        else:
-          speakername=lname + ", " + fname
-        #taken out becuase it was infinitely slower
-        #thumb=HTML.ElementFromURL(speakerurl).xpath('//link[@rel="image_src"]')[0].get('href')
-        dir.Append(Function(DirectoryItem(speakertalks, title=speakername), pageUrl = speakerurl))
-    
-
-    try:
-        next=TED_BASE + content.xpath('//a[@class="next"]')[0].get('href')
-        dir.Append(Function(DirectoryItem(SpeakersList, title="Next page ..."), pageUrl = next))
-    except: pass
-    return dir
+  return dir
 
 ####################################################################################################
 
-def speakertalks(sender,pageUrl):
+def SpeakersAZ(sender):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
 
-    dir = MediaContainer(title2=sender.itemTitle, viewGroup="InfoList")
-    
-    pageUrl=pageUrl.replace("&#13","")
-    content = HTML.ElementFromURL(pageUrl).xpath('//dl[@class="box clearfix"]')
-    page=HTTP.Request(pageUrl)
+  # A to Z
+  for char in list(ascii_uppercase):
+    dir.Append(Function(DirectoryItem(SpeakersList, title=char), char=char))
 
-    count=-1
-    
-    for boxes in content:
-      count=count+1
-      for things in boxes[0]:
-         thumb=things.xpath("img")[1].get('src')
-      for things in boxes[1]:
-         link=things.xpath('//ul/li/h4/a')[count].get('href')
-         title=things.xpath('//ul/li/h4/a')[count].text
-         subtitle=things.xpath('//ul/li/em')[count].text
-         link=TED_BASE + link
-         vidUrl=link     
-         content=HTML.ElementFromURL(vidUrl).xpath('//dl[@class="downloads"]')[0].xpath('//dt')[4]
-         vidUrl2=content[0].get('href')
-         link=vidUrl2
-         trueUrl="http://www.ted.com" + link + "#.mp4"
-         dir.Append(VideoItem((trueUrl), title=title,subtitle=subtitle, thumb=thumb))
-
-    return dir    
-####################################################################################################
-
-def FrontPageList(sender,pageUrl):
-   
-    dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
-    
-    dir.Append(Function(DirectoryItem(FrontPageSort, "Technology"), pageUrl = "1"))
-    dir.Append(Function(DirectoryItem(FrontPageSort, "Entertainment"), pageUrl = "2"))
-    dir.Append(Function(DirectoryItem(FrontPageSort, "Design"), pageUrl = "3"))
-    dir.Append(Function(DirectoryItem(FrontPageSort, "Business"), pageUrl = "4"))
-    dir.Append(Function(DirectoryItem(FrontPageSort, "Science"), pageUrl = "5"))
-    dir.Append(Function(DirectoryItem(FrontPageSort, "Global Issues"), pageUrl = "7"))
-    dir.Append(Function(DirectoryItem(FrontPageSort, "All"), pageUrl = "0"))
-    
-    return dir
-####################################################################################################
-
-def FrontPageSort(sender,pageUrl):
-    
-    dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
-    id=pageUrl
-    
-    newest="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=NEWEST"
-    mosttrans="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=MOSTTRANSLATED"
-    mostemail="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=MOSTEMAILED"
-    mostdisc="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=MOSTDISCUSSED"
-    mostfav="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=MOSTFAVORITED"
-    jawdrop="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=JAW-DRAPPING"
-    persu="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=PERSUASIVE"
-    courage="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=COURAGEOUS"
-    ingen="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=INGENIOUS"
-    fasc="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=FASCINATING"
-    inspi="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=INSPIRING"
-    beaut="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=BEAUTIFUL"
-    funny="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=FUNNY"
-    infor="http://www.ted.com/talks/searchRpc?tagid=" + id + "&orderedby=INFORMATIVE"
-    
-    dir.Append(Function(DirectoryItem(gettalks, "Newest releases"), pageUrl = newest))
-    dir.Append(Function(DirectoryItem(gettalks, "Most Languages"), pageUrl = mosttrans))
-    dir.Append(Function(DirectoryItem(gettalks, "Most emailed this week"), pageUrl = mostemail))
-    dir.Append(Function(DirectoryItem(gettalks, "Most comments this week"), pageUrl = mostdisc))
-    dir.Append(Function(DirectoryItem(gettalks, "Most favorited of all-time"), pageUrl = mostfav))
-    dir.Append(Function(DirectoryItem(gettalks, "Rated jaw-dropping"), pageUrl = jawdrop))
-    dir.Append(Function(DirectoryItem(gettalks, "... persuasive"), pageUrl = persu))
-    dir.Append(Function(DirectoryItem(gettalks, "... ingenious"), pageUrl = ingen))
-    dir.Append(Function(DirectoryItem(gettalks, "... fascinating"), pageUrl = fasc))
-    dir.Append(Function(DirectoryItem(gettalks, "... inspiring"), pageUrl = inspi))
-    dir.Append(Function(DirectoryItem(gettalks, "... beautiful"), pageUrl = beaut))
-    dir.Append(Function(DirectoryItem(gettalks, "... funny"), pageUrl = funny))
-    dir.Append(Function(DirectoryItem(gettalks, "... informative"), pageUrl = infor))
-    
-    return dir
+  return dir
 
 ####################################################################################################
 
-def ThemeList(sender,pageUrl):
-   
-    dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+def SpeakersList(sender, char, page=1):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
 
-    
-    content = HTML.ElementFromURL(pageUrl)
-    page=HTTP.Request(pageUrl)
+  content = HTML.ElementFromURL(TED_SPEAKERS % (page), cacheTime=CACHE_1WEEK)
 
-    
-    for themes in content.xpath('//div[@id="maincontent"]/div/div/div/ul/li/a'):
-        themeid=themes.get('href')
-        themeid=themeid.replace('/talks/tags/id/','')
-        themename=themes.text
-        themeUrl="http://www.ted.com" + themeid
-        link=HTML.ElementFromURL(themeUrl).xpath('//link[@rel="alternate"]')[0].get('href')
-        dir.Append(Function(DirectoryItem(ThemeSort, title=themename), pageUrl = link))
-    
-    return dir
+  letter_list = content.xpath('//h3[text()="' + char + '"]/following-sibling::ul')
+  if len(letter_list) == 1:
+    for speaker in letter_list[0].xpath('./li/a'):
+      speaker_name = speaker.text.split(" ", 1)
+      speaker_name.reverse()
+      speaker_name = ", ".join(speaker_name)
+      speaker_name = speaker_name.strip(", ")
+      url = TED_BASE + speaker.get('href')
+
+      dir.Append(Function(DirectoryItem(SpeakerTalks, title=speaker_name, thumb=Function(Photo, url=url)), url=url))
+
+    if len( content.xpath('//a[@class="next"]') ) > 0:
+      dir.Append(SpeakersList(sender, char, page=page+1))
+
+  elif len( content.xpath('//a[@class="next"]') ) > 0:
+    dir = SpeakersList(sender, char, page=page+1)
+
+  if len(dir) == 0:
+    dir.header = 'No Speakers'
+    dir.message = 'There aren\'t any speakers whose name starts with ' + char
+
+  return dir
 
 ####################################################################################################
 
-def ThemeSort(sender,pageUrl):
-    dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
-    
-    content=XML.ElementFromURL(pageUrl)
-    
-    for item in content.xpath("/rss/channel/item"):
-        links=item.xpath("//link")
-        titles=item.xpath("//title")
-        pubdates=item.xpath("//pubDate")
-        descs=item.xpath("//description")
-        
-    count=-1
-    for link in links:
-        count=count+1
-        Log(count)
-        if count >1:
-            vidUrl=links[count].text
-            vidtitle=titles[count].text
-            viddate=pubdates[count-2].text
-            viddesc=descs[count-2].text
+def SpeakerTalks(sender, url):
+  dir = MediaContainer(title2=sender.itemTitle)
 
-            
-            content=HTML.ElementFromURL(vidUrl).xpath('//dl[@class="downloads"]')[1]            
-            for items in content:
-                #if audio is available
-                vidUrl2=content.xpath('//dt')[3]
+  content = HTML.ElementFromURL(url).xpath('//dl[@class="box clearfix"]')
+  for talk in content:
+    title = talk.xpath('.//h4/a')[0].text
+    url = TED_BASE + talk.xpath('.//h4/a')[0].get('href')
+    timecode = talk.xpath('.//em')[0].text.split(" Posted: ")[0]
+    duration = CalculateDuration(timecode)
+    subtitle = talk.xpath('.//em')[0].text.split(" Posted: ")[1]
+    thumb = talk.xpath('.//img')[1].get('src')
 
+    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, thumb=Function(GetThumb, url=thumb)), url=url))
 
-        
-            link=vidUrl2.xpath("a")[0].get('href')
-            trueUrl="http://www.ted.com" + link + "#.mp4"
-            thumb=HTML.ElementFromURL(vidUrl).xpath('//link[@rel="image_src"]')[0].get('href')
+  return dir
 
-            dir.Append(VideoItem((trueUrl), title=vidtitle,subtitle=viddate, thumb=thumb, summary=viddesc))
-
-    return dir    
 ####################################################################################################
 
-def TagsList(sender,pageUrl):
-    
-    dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
-    
-    content = HTML.ElementFromURL(pageUrl)
-    page=HTTP.Request(pageUrl)
+def FrontPageList(sender):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
 
-    
-    for tags in content.xpath('//div[@id="maincontent"]/div/div/div/ul/li/a'):
-        tagid=tags.get('href')
-        tagid=tagid.replace('/talks/tags/id/','')
-        tagname=tags.text
-        jsonUrl="http://www.ted.com/talks/searchRpc?tagid=" + tagid + "&orderedby=NEWEST"
-        
-        dir.Append(Function(DirectoryItem(gettalks, title=tagname), pageUrl = jsonUrl))
-        
-    return dir
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Technology"), id=1))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Entertainment"), id=2))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Design"), id=3))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Business"), id=4))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Science"), id=5))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Global issues"), id=7))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "All"), id=0))
+
+  return dir
+
+####################################################################################################
+
+def FrontPageSort(sender, id):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+
+  dir.Append(Function(DirectoryItem(GetTalks, "Newest releases"), url=TED_TALKS_FILTER % (id, "NEWEST") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Most languages"), url=TED_TALKS_FILTER % (id, "MOSTTRANSLATED") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Most emailed this week"), url=TED_TALKS_FILTER % (id, "MOSTEMAILED") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Most comments this week"), url=TED_TALKS_FILTER % (id, "MOSTDISCUSSED") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Most favorited of all-time"), url=TED_TALKS_FILTER % (id, "MOSTFAVORITED") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Rated jaw-dropping"), url=TED_TALKS_FILTER % (id, "JAW-DRAPPING") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... persuasive"), url=TED_TALKS_FILTER % (id, "PERSUASIVE") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... courageous"), url=TED_TALKS_FILTER % (id, "COURAGEOUS") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... ingenious"), url=TED_TALKS_FILTER % (id, "INGENIOUS") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... fascinating"), url=TED_TALKS_FILTER % (id, "FASCINATING") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... inspiring"), url=TED_TALKS_FILTER % (id, "INSPIRING") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... beautiful"), url=TED_TALKS_FILTER % (id, "BEAUTIFUL") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... funny"), url=TED_TALKS_FILTER % (id, "FUNNY") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... informative"), url=TED_TALKS_FILTER % (id, "INFORMATIVE") ))
+
+  return dir
+
+####################################################################################################
+
+def ThemeList(sender):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+
+  content = HTML.ElementFromURL(TED_THEMES)
+  for theme in content.xpath('//div[@id="maincontent"]//a'):
+    title = theme.text
+    url = TED_BASE + theme.get('href')
+    dir.Append(Function(DirectoryItem(Theme, title=title, thumb=Function(Photo, url=url)), url=url))
+
+  return dir
+
+####################################################################################################
+
+def Theme(sender, url):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+
+  rss_url = HTML.ElementFromURL(url).xpath('//link[@rel="alternate"]')[0].get('href')
+
+  content = XML.ElementFromURL(rss_url, errors='ignore')
+  for item in content.xpath("//item"):
+    title = item.xpath('./title')[0].text
+    url = item.xpath('./link')[0].text
+    summary = String.StripTags( item.xpath('./description')[0].text )
+    date = Datetime.ParseDate(item.xpath('./pubDate')[0].text).strftime('%b %Y')
+    thumb = item.xpath('./media:thumbnail', namespaces=MEDIA_NS)[0].get('url')
+
+    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(GetThumb, url=thumb)), url=url))
+
+  return dir
+
+####################################################################################################
+
+def TagsList(sender):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+
+  content = HTML.ElementFromURL(TED_TAGS)
+  for tag in content.xpath('//div[@id="maincontent"]//a'):
+    title = tag.text
+    id = int( tag.get('href').rsplit('/', 1)[1] )
+    url = TED_TALKS_FILTER % (id, "NEWEST")
+
+    dir.Append(Function(DirectoryItem(GetTalks, title=title), url=url))
+
+  return dir
 
 ####################################################################################################    
-        
-def gettalks(sender,pageUrl):       
-     dir = MediaContainer(title2=sender.itemTitle, viewGroup="InfoList")   
-     jsontag=JSON.ObjectFromURL(pageUrl)['main']
 
-     for talks in jsontag:
-         id=talks['id']
-         talkDate=talks['talkDate']
-         talkfDate=talks['talkfDate']
-         talkcDate=talks['talkcDate']
-         talkpDate=talks['talkpDate']
-         talkDuration=talks['talkDuration']
-         talkLink=talks['talkLink']
-         talkLink="http://www.ted.com" + talkLink
-         
-         content=HTML.ElementFromURL(talkLink).xpath('//dl[@class="downloads"]')[1]            
-         for items in content:
-             #if audio is available
-             vidUrl2=content.xpath("dt")[2]
-             
+def GetTalks(sender, url):
+  dir = MediaContainer(title2=sender.itemTitle)
 
-            
-        
-         link=vidUrl2.xpath("a")[0].get('href')
-         trueUrl="http://www.ted.com" + link + "#.mp4"
-         link=trueUrl
+  talks = JSON.ObjectFromURL(url)['main']
+  for talk in talks:
+    title = talk['tTitle']
+    subtitle = talk['talkpDate'] # Post date
+    if talk['altTitle'] != talk['tTitle']:
+      summary = String.StripTags( talk['altTitle'] + '\n\n' + talk['blurb'] )
+    else:
+      summary = String.StripTags( talk['blurb'] )
+    timecode = talk['talkDuration']
+    duration = CalculateDuration(timecode)
+    thumb = "http://images.ted.com/images/ted/" + str(talk['image']) + "_240x180.jpg"
+    url = TED_BASE + talk['talkLink']
 
+    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, summary=summary, thumb=Function(GetThumb, url=thumb)), url=url))
 
+  return dir
 
-         tTitle=talks['tTitle']
-         altTitle=talks['altTitle']
-         blurb=talks['blurb']
-         blurb=blurb.replace("&#39;","'")
-         speaker=talks['speaker']
-         fName=talks['fName']
-         lName=talks['lName']
-            
-         talkratings=talks['ratings']
-         ratingname=[]
-         ratingid=[]
-         for ratings in talkratings:
-             ratingname.append(ratings['name'])
-             ratingid.append(ratings['id'])
-            
-         image=talks['image']
-         thumb="http://images.ted.com/images/ted/" + str(image) + "_240x180.jpg"
+####################################################################################################
 
-         title2=talkDate + " (" + talkDuration + ")"
-         dir.Append(VideoItem(link, title=altTitle,subtitle=title2, thumb=thumb, summary=blurb))
-         
-     return dir
-            
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+def PlayVideo(sender, url):
+  video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
+  return Redirect(TED_BASE + video_url + '#.mp4')
+
+####################################################################################################
+
+def Photo(url):
+  try:
+    photo_url = HTML.ElementFromURL(url).xpath('//link[@rel="image_src"]')[0].get('href')
+    data = HTTP.Request(photo_url, cacheTime=CACHE_1MONTH).content
+    return DataObject(data, 'image/jpeg')
+  except:
+    return Redirect(R(TED_THUMB))
+
+####################################################################################################
+
+def GetThumb(url):
+  try:
+    data = HTTP.Request(url, cacheTime=CACHE_1MONTH).content
+    return DataObject(data, 'image/jpeg')
+  except:
+    return Redirect(R(TED_THUMB))
+
+####################################################################################################
+
+def CalculateDuration(timecode):
+  milliseconds = 0
+  d = re.search('([0-9]{1,2}):([0-9]{2})', timecode)
+  milliseconds += int( d.group(1) ) * 60 * 1000
+  milliseconds += int( d.group(2) ) * 1000
+  return milliseconds
