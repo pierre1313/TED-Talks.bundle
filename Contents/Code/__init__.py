@@ -203,7 +203,7 @@ def GetTalks(sender, url):
       summary = String.StripTags( talk['blurb'] )
     timecode = talk['talkDuration']
     duration = CalculateDuration(timecode)
-    thumb = "http://images.ted.com/images/ted/" + str(talk['image']) + "_240x180.jpg"
+    thumb = str(talk['image']) + "_240x180.jpg"
     url = TED_BASE + talk['talkLink']
 
     dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, summary=summary, thumb=Function(GetThumb, url=thumb)), url=url))
@@ -214,7 +214,7 @@ def GetTalks(sender, url):
 
 def PlayVideo(sender, url):
   video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
-  return Redirect(TED_BASE + video_url + '#.mp4')
+  return Redirect(TED_BASE + video_url)
 
 ####################################################################################################
 
