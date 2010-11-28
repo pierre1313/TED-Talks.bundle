@@ -14,6 +14,11 @@ TED_SPEAKERS     = "http://www.ted.com/speakers/atoz/page/%d"
 
 MEDIA_NS         = {'media':'http://search.yahoo.com/mrss/'}
 
+YT_VIDEO_PAGE    = "http://www.youtube.com/watch?v=%s"
+YT_GET_VIDEO_URL = "http://www.youtube.com/get_video?video_id=%s&t=%s&fmt=%d&asv=3"
+YT_VIDEO_FORMATS = ['Standard', 'Medium', 'High', '720p', '1080p']
+YT_FMT           = [34, 18, 35, 22, 37]
+
 # Default artwork and icon(s)
 TED_ART          = "art-default.jpg"
 TED_THUMB        = "icon-default.jpg"
@@ -31,7 +36,7 @@ def Start():
   DirectoryItem.thumb      = R(TED_THUMB)
 
   HTTP.CacheTime = CACHE_1DAY
-  HTTP.Headers['User-agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.10) Gecko/20100914 Firefox/3.6.10"
+  HTTP.Headers['User-agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.12) Gecko/20101026 Firefox/3.6.12"
 
 ####################################################################################################
 
@@ -213,8 +218,20 @@ def GetTalks(sender, url):
 ####################################################################################################
 
 def PlayVideo(sender, url):
-  video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
-  return Redirect(TED_BASE + video_url)
+  video_url = None
+
+  try:
+    video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
+    video_url = TED_BASE + video_url
+  except:
+    try:
+      yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
+      video_id = re.search('v/(.{11})', yt_url).group(1)
+      video_url = GetYoutubeUrl(video_id)
+    except:
+      pass
+
+  return Redirect(video_url)
 
 ####################################################################################################
 
@@ -243,3 +260,27 @@ def CalculateDuration(timecode):
   milliseconds += int( d.group(1) ) * 60 * 1000
   milliseconds += int( d.group(2) ) * 1000
   return milliseconds
+
+####################################################################################################
+
+def GetYoutubeUrl(video_id, quality='720p'):
+  yt_page = HTTP.Request(YT_VIDEO_PAGE % video_id, cacheTime=1).content
+
+  t = re.findall('&t=([^&]+)', yt_page)[0]
+  fmt_list = re.findall('&fmt_list=([^&]+)', yt_page)[0]
+  fmt_list = String.Unquote(fmt_list, usePlus=False)
+  fmts = re.findall('([0-9]+)[^,]*', fmt_list)
+
+  index = YT_VIDEO_FORMATS.index(quality)
+  if YT_FMT[index] in fmts:
+    fmt = YT_FMT[index]
+  else:
+    for i in reversed( range(0, index+1) ):
+      if str(YT_FMT[i]) in fmts:
+        fmt = YT_FMT[i]
+        break
+      else:
+        fmt = 5
+
+  url = YT_GET_VIDEO_URL % (video_id, t, fmt)
+  return url
