@@ -36,7 +36,7 @@ def Start():
   DirectoryItem.thumb      = R(TED_THUMB)
 
   HTTP.CacheTime = CACHE_1DAY
-  HTTP.Headers['User-agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.12) Gecko/20101026 Firefox/3.6.12"
+  HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.12) Gecko/20101026 Firefox/3.6.12"
 
 ####################################################################################################
 
@@ -80,14 +80,13 @@ def SpeakersList(sender, char, page=1):
       dir.Append(Function(DirectoryItem(SpeakerTalks, title=speaker_name, thumb=Function(Photo, url=url)), url=url))
 
     if len( content.xpath('//a[@class="next"]') ) > 0:
-      dir.Append(SpeakersList(sender, char, page=page+1))
+      dir.Extend(SpeakersList(sender, char, page=page+1))
 
   elif len( content.xpath('//a[@class="next"]') ) > 0:
     dir = SpeakersList(sender, char, page=page+1)
 
   if len(dir) == 0:
-    dir.header = 'No Speakers'
-    dir.message = 'There aren\'t any speakers whose name starts with ' + char
+    return MessageContainer("Empty", "There aren't any speakers whose name starts with " + char)
 
   return dir
 
@@ -105,10 +104,10 @@ def SpeakerTalks(sender, url):
     subtitle = talk.xpath('.//em')[0].text.split(" Posted: ")[1]
     thumb = talk.xpath('.//img')[1].get('src')
 
-    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, thumb=Function(GetThumb, url=thumb)), url=url))
+    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, thumb=Function(Thumb, url=thumb)), url=url))
 
   if len(dir) == 0 :
-    return MessageContainer("Error","This category is actually empty")
+    return MessageContainer("Empty", "This category is empty")
   else:
     return dir
 
@@ -170,7 +169,7 @@ def Theme(sender, url):
     rss_url = HTML.ElementFromURL(url).xpath('//link[@rel="alternate"]')[0].get('href')
     content = XML.ElementFromURL(rss_url, errors='ignore')
   except:
-    return MessageContainer("Error","The link for this entry apperas broken.")
+    return MessageContainer("Error", "The link for this entry appeaas broken.")
 
   for item in content.xpath("//item"):
     title = item.xpath('./title')[0].text
@@ -180,12 +179,12 @@ def Theme(sender, url):
     try:
       thumb = item.xpath('./media:thumbnail', namespaces=MEDIA_NS)[0].get('url')
     except:
-      thumb = R(TED_THUMB)
+      thumb = None
 
-    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(GetThumb, url=thumb)), url=url))
+    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
 
   if len(dir) == 0 :
-    return MessageContainer("Error","This category is actually empty")
+    return MessageContainer("Empty", "This category is empty")
   else:
     return dir
 
@@ -222,10 +221,10 @@ def GetTalks(sender, url):
     thumb = str(talk['image']) + "_240x180.jpg"
     url = TED_BASE + talk['talkLink']
 
-    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, summary=summary, thumb=Function(GetThumb, url=thumb)), url=url))
+    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
   
   if len(dir) == 0 :
-    return MessageContainer("Error","This category is actually empty")
+    return MessageContainer("Empty", "This category is empty")
   else:
     return dir
 
@@ -233,7 +232,6 @@ def GetTalks(sender, url):
 
 def PlayVideo(sender, url):
   video_url = None
-  Log(url)
 
   try:
     video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
@@ -242,12 +240,12 @@ def PlayVideo(sender, url):
     try:
       yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
       video_id = re.search('v/(.{11})', yt_url).group(1)
-      video_url = GetYoutubeUrl(video_id)
+      video_url = YoutubeUrl(video_id)
     except:
       try:
         yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
         video_id = re.search('v=(.{11})', yt_url).group(1)
-        video_url = GetYoutubeUrl(video_id)
+        video_url = YoutubeUrl(video_id)
       except:
         pass
 
@@ -265,12 +263,14 @@ def Photo(url):
 
 ####################################################################################################
 
-def GetThumb(url):
-  try:
-    data = HTTP.Request(url, cacheTime=CACHE_1MONTH).content
-    return DataObject(data, 'image/jpeg')
-  except:
-    return Redirect(R(TED_THUMB))
+def Thumb(url):
+  if url:
+    try:
+      data = HTTP.Request(url, cacheTime=CACHE_1MONTH).content
+      return DataObject(data, 'image/jpeg')
+    except:
+      pass
+  return Redirect(R(TED_THUMB))
 
 ####################################################################################################
 
@@ -283,7 +283,7 @@ def CalculateDuration(timecode):
 
 ####################################################################################################
 
-def GetYoutubeUrl(video_id, quality='720p'):
+def YoutubeUrl(video_id, quality='720p'):
   yt_page = HTTP.Request(YT_VIDEO_PAGE % video_id, cacheTime=1).content
 
   t = re.findall('&t=([^&]+)', yt_page)[0]
