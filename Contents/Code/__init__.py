@@ -169,7 +169,7 @@ def Theme(sender, url):
     rss_url = HTML.ElementFromURL(url).xpath('//link[@rel="alternate"]')[0].get('href')
     content = XML.ElementFromURL(rss_url, errors='ignore')
   except:
-    return MessageContainer("Error", "The link for this entry appeaas broken.")
+    return MessageContainer("Error", "The link for this entry appears to be broken")
 
   for item in content.xpath("//item"):
     title = item.xpath('./title')[0].text
