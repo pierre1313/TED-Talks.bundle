@@ -7,7 +7,7 @@ PLUGIN_TITLE     = "TED talks"
 VIDEO_PREFIX     = "/video/TED"
 
 TED_BASE         = "http://www.ted.com"
-TED_TALKS_FILTER = "http://www.ted.com/talks/searchRpc?tagid=%d&orderedby=%s"
+TED_TALKS_FILTER = "http://www.ted.com/talks/browse.json?tagid=%d&orderedby=%s"
 TED_THEMES       = "http://www.ted.com/themes/atoz"
 TED_TAGS         = "http://www.ted.com/talks/tags"
 TED_SPEAKERS     = "http://www.ted.com/speakers/atoz/page/%d"
@@ -116,12 +116,12 @@ def SpeakerTalks(sender, url):
 def FrontPageList(sender):
   dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
 
-  dir.Append(Function(DirectoryItem(FrontPageSort, "Technology"), id=1))
-  dir.Append(Function(DirectoryItem(FrontPageSort, "Entertainment"), id=2))
-  dir.Append(Function(DirectoryItem(FrontPageSort, "Design"), id=3))
-  dir.Append(Function(DirectoryItem(FrontPageSort, "Business"), id=4))
-  dir.Append(Function(DirectoryItem(FrontPageSort, "Science"), id=5))
-  dir.Append(Function(DirectoryItem(FrontPageSort, "Global issues"), id=7))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Technology"), id=20))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Entertainment"), id=25))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Design"), id=26))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Business"), id=21))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Science"), id=24))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "Global issues"), id=28))
   dir.Append(Function(DirectoryItem(FrontPageSort, "All"), id=0))
 
   return dir
@@ -196,12 +196,46 @@ def TagsList(sender):
   content = HTML.ElementFromURL(TED_TAGS)
   for tag in content.xpath('//div[@id="maincontent"]//a'):
     title = tag.text
-    id = int( tag.get('href').rsplit('/', 1)[1] )
-    url = TED_TALKS_FILTER % (id, "NEWEST")
-
-    dir.Append(Function(DirectoryItem(GetTalks, title=title), url=url))
+    url = TED_BASE + tag.get('href')
+    dir.Append(Function(DirectoryItem(Tag, title=title), url=url))
 
   return dir
+
+####################################################################################################
+
+def Tag(sender, url):
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+  current_page = HTML.ElementFromURL(url)
+  prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
+  Log(HTML.StringFromElement(prevpage))
+  try: 
+    dir.Append(Function(DirectoryItem(Tag, title="Previous Page"), url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')))
+  except:
+    pass
+
+  for item in HTML.ElementFromURL(url).xpath("//dl[@class='clearfix']"):
+    title = item.xpath('./dd//a')[0].text
+    url = TED_BASE + item.xpath('./dd//a')[0].get('href')
+    summary= None
+    date = None
+    try:
+      thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
+    except:
+      thumb = None
+
+    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
+
+  nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
+  Log(HTML.StringFromElement(nextpage))
+  try: 
+    dir.Append(Function(DirectoryItem(Tag, title="Next Page"), url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')))
+  except:
+    pass
+    
+  if len(dir) == 0 :
+    return MessageContainer("Empty", "This category is empty")
+  else:
+    return dir
 
 ####################################################################################################    
 
@@ -209,17 +243,18 @@ def GetTalks(sender, url):
   dir = MediaContainer(title2=sender.itemTitle)
 
   talks = JSON.ObjectFromURL(url)['main']
+  Log(talks)
   for talk in talks:
-    title = talk['tTitle']
-    subtitle = talk['talkpDate'] # Post date
-    if talk['altTitle'] != talk['tTitle']:
-      summary = String.StripTags( talk['altTitle'] + '\n\n' + talk['blurb'] )
+    title = talks[str(talk)]['tTitle']
+    subtitle = talks[str(talk)]['talkpDate'] # Post date
+    if talks[str(talk)]['altTitle'] != talks[str(talk)]['tTitle']:
+      summary = String.StripTags( talks[str(talk)]['altTitle'] + '\n\n' + talks[str(talk)]['blurb'] )
     else:
-      summary = String.StripTags( talk['blurb'] )
-    timecode = talk['talkDuration']
+      summary = String.StripTags( talks[str(talk)]['blurb'] )
+    timecode = talks[str(talk)]['talkDuration']
     duration = CalculateDuration(timecode)
-    thumb = str(talk['image']) + "_240x180.jpg"
-    url = TED_BASE + talk['talkLink']
+    thumb = str(talks[str(talk)]['image']) + "_240x180.jpg"
+    url = TED_BASE + talks[str(talk)]['talkLink']
 
     dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=subtitle, duration=duration, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
   
