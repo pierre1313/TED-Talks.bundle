@@ -93,7 +93,7 @@ def SpeakersList(sender, char, page=1):
 ####################################################################################################
 
 def SpeakerTalks(sender, url):
-  dir = MediaContainer(title2=sender.itemTitle)
+  dir = MediaContainer(title2=sender.itemTitle,httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
 
   content = HTML.ElementFromURL(url).xpath('//dl[@class="box clearfix"]')
   for talk in content:
@@ -163,7 +163,7 @@ def ThemeList(sender):
 ####################################################################################################
 
 def Theme(sender, url):
-  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
   try:
     rss_url = HTML.ElementFromURL(url).xpath('//link[@rel="alternate"]')[0].get('href')
     content = XML.ElementFromURL(rss_url, errors='ignore')
@@ -203,10 +203,9 @@ def TagsList(sender):
 ####################################################################################################
 
 def Tag(sender, url):
-  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
+  dir = MediaContainer(title2=sender.itemTitle, viewGroup="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
   current_page = HTML.ElementFromURL(url)
   prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
-  Log(HTML.StringFromElement(prevpage))
   try: 
     dir.Append(Function(DirectoryItem(Tag, title="Previous Page"), url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')))
   except:
@@ -225,7 +224,6 @@ def Tag(sender, url):
     dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
 
   nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
-  Log(HTML.StringFromElement(nextpage))
   try: 
     dir.Append(Function(DirectoryItem(Tag, title="Next Page"), url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')))
   except:
@@ -239,10 +237,9 @@ def Tag(sender, url):
 ####################################################################################################    
 
 def GetTalks(sender, url):
-  dir = MediaContainer(title2=sender.itemTitle)
+  dir = MediaContainer(title2=sender.itemTitle,httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
 
   talks = JSON.ObjectFromURL(url)['main']
-  Log(talks)
   for talk in talks:
     title = talks[str(talk)]['tTitle']
     subtitle = talks[str(talk)]['talkpDate'] # Post date
@@ -317,15 +314,22 @@ def CalculateDuration(timecode):
 
 ####################################################################################################
 
-def YoutubeUrl(video_id, quality='720p'):
+def YoutubeUrl(video_id, quality='1080p'):
   yt_page = HTTP.Request(YT_VIDEO_PAGE % video_id, cacheTime=1).content
+  
+  fmt_url_map = re.findall('"fmt_url_map".+?"([^"]+)', yt_page)[0]
+  fmt_url_map = fmt_url_map.replace('\/', '/').split(',')
 
-  t = re.findall('&t=([^&]+)', yt_page)[0]
-  fmt_list = re.findall('&fmt_list=([^&]+)', yt_page)[0]
-  fmt_list = String.Unquote(fmt_list, usePlus=False)
-  fmts = re.findall('([0-9]+)[^,]*', fmt_list)
+  fmts = []
+  fmts_info = {}
+
+  for f in fmt_url_map:
+    (fmt, url) = f.split('|')
+    fmts.append(fmt)
+    fmts_info[str(fmt)] = url
 
   index = YT_VIDEO_FORMATS.index(quality)
+
   if YT_FMT[index] in fmts:
     fmt = YT_FMT[index]
   else:
@@ -336,5 +340,6 @@ def YoutubeUrl(video_id, quality='720p'):
       else:
         fmt = 5
 
-  url = YT_GET_VIDEO_URL % (video_id, t, fmt)
+  url = (fmts_info[str(fmt)]).decode('unicode_escape')
+  Log("  VIDEO URL --> " + url)
   return url
