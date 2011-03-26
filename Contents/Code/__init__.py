@@ -135,7 +135,6 @@ def FrontPageSort(sender, id):
   dir.Append(Function(DirectoryItem(GetTalks, "Most languages"), url=TED_TALKS_FILTER % (id, "MOSTTRANSLATED") ))
   dir.Append(Function(DirectoryItem(GetTalks, "Most emailed this week"), url=TED_TALKS_FILTER % (id, "MOSTEMAILED") ))
   dir.Append(Function(DirectoryItem(GetTalks, "Most comments this week"), url=TED_TALKS_FILTER % (id, "MOSTDISCUSSED") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "Most favorited of all-time"), url=TED_TALKS_FILTER % (id, "MOSTFAVORITED") ))
   dir.Append(Function(DirectoryItem(GetTalks, "Rated jaw-dropping"), url=TED_TALKS_FILTER % (id, "JAW-DRAPPING") ))
   dir.Append(Function(DirectoryItem(GetTalks, "... persuasive"), url=TED_TALKS_FILTER % (id, "PERSUASIVE") ))
   dir.Append(Function(DirectoryItem(GetTalks, "... courageous"), url=TED_TALKS_FILTER % (id, "COURAGEOUS") ))
