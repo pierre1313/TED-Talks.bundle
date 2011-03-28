@@ -205,30 +205,32 @@ def TagsList(sender):
 def Tag(sender, url):
   dir = MediaContainer(title2=sender.itemTitle, viewGroup="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
   current_page = HTML.ElementFromURL(url)
-  prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
-  try: 
-    dir.Append(Function(DirectoryItem(Tag, title="Previous Page"), url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')))
+  try:
+	  prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
+	  try: 
+		dir.Append(Function(DirectoryItem(Tag, title="Previous Page"), url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')))
+	  except:
+		pass
+	
+	  for item in HTML.ElementFromURL(url).xpath("//dl[@class='clearfix']"):
+		title = item.xpath('./dd//a')[0].text
+		url = TED_BASE + item.xpath('./dd//a')[0].get('href')
+		summary= None
+		date = None
+		try:
+		  thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
+		except:
+		  thumb = None
+	
+		dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
+	
+	  nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
+	  try: 
+		dir.Append(Function(DirectoryItem(Tag, title="Next Page"), url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')))
+	  except:
+		pass
   except:
-    pass
-
-  for item in HTML.ElementFromURL(url).xpath("//dl[@class='clearfix']"):
-    title = item.xpath('./dd//a')[0].text
-    url = TED_BASE + item.xpath('./dd//a')[0].get('href')
-    summary= None
-    date = None
-    try:
-      thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
-    except:
-      thumb = None
-
-    dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
-
-  nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
-  try: 
-    dir.Append(Function(DirectoryItem(Tag, title="Next Page"), url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')))
-  except:
-    pass
-    
+    pass    
   if len(dir) == 0 :
     return MessageContainer("Empty", "This category is empty")
   else:
@@ -278,7 +280,12 @@ def PlayVideo(sender, url):
         video_id = re.search('v=(.{11})', yt_url).group(1)
         video_url = YoutubeUrl(video_id)
       except:
-        pass
+        try:
+          ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
+          video_url = re.search('vu=(http://video.ted.com.*?flv)', HTML.StringFromElement(ted_streaming_el)).group(1)
+        except:
+          Log(HTTP.Request(url).content)
+          pass
 
   return Redirect(video_url)
 
