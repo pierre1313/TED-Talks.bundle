@@ -7,7 +7,7 @@ PLUGIN_TITLE     = "TED talks"
 VIDEO_PREFIX     = "/video/TED"
 
 TED_BASE         = "http://www.ted.com"
-TED_TALKS_FILTER = "http://www.ted.com/talks/browse.json?tagid=%d&orderedby=%s"
+TED_TALKS_FILTER = "http://www.ted.com/talks/browse.json?tagid=%s&orderedby=%s"
 TED_THEMES       = "http://www.ted.com/themes/atoz"
 TED_TAGS         = "http://www.ted.com/talks/tags"
 TED_SPEAKERS     = "http://www.ted.com/speakers/atoz/page/%d"
@@ -122,7 +122,7 @@ def FrontPageList(sender):
   dir.Append(Function(DirectoryItem(FrontPageSort, "Business"), id=21))
   dir.Append(Function(DirectoryItem(FrontPageSort, "Science"), id=24))
   dir.Append(Function(DirectoryItem(FrontPageSort, "Global issues"), id=28))
-  dir.Append(Function(DirectoryItem(FrontPageSort, "All"), id=0))
+  dir.Append(Function(DirectoryItem(FrontPageSort, "All"), id=None))
 
   return dir
 
@@ -130,20 +130,24 @@ def FrontPageList(sender):
 
 def FrontPageSort(sender, id):
   dir = MediaContainer(title2=sender.itemTitle, viewGroup="List")
-
-  dir.Append(Function(DirectoryItem(GetTalks, "Newest releases"), url=TED_TALKS_FILTER % (id, "NEWEST") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "Most languages"), url=TED_TALKS_FILTER % (id, "MOSTTRANSLATED") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "Most emailed this week"), url=TED_TALKS_FILTER % (id, "MOSTEMAILED") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "Most comments this week"), url=TED_TALKS_FILTER % (id, "MOSTDISCUSSED") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "Rated jaw-dropping"), url=TED_TALKS_FILTER % (id, "JAW-DRAPPING") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "... persuasive"), url=TED_TALKS_FILTER % (id, "PERSUASIVE") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "... courageous"), url=TED_TALKS_FILTER % (id, "COURAGEOUS") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "... ingenious"), url=TED_TALKS_FILTER % (id, "INGENIOUS") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "... fascinating"), url=TED_TALKS_FILTER % (id, "FASCINATING") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "... inspiring"), url=TED_TALKS_FILTER % (id, "INSPIRING") ))
+  if id == None:
+    id_s = ''
+  else:
+    id_s = str(id)
+    
+  dir.Append(Function(DirectoryItem(GetTalks, "Newest releases"), url=TED_TALKS_FILTER % (id_s, "NEWEST") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Most languages"), url=TED_TALKS_FILTER % (id_s, "MOSTTRANSLATED") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Most emailed this week"), url=TED_TALKS_FILTER % (id_s, "MOSTEMAILED") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Most comments this week"), url=TED_TALKS_FILTER % (id_s, "MOSTDISCUSSED") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "Rated jaw-dropping"), url=TED_TALKS_FILTER % (id_s, "JAW-DRAPPING") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... persuasive"), url=TED_TALKS_FILTER % (id_s, "PERSUASIVE") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... courageous"), url=TED_TALKS_FILTER % (id_s, "COURAGEOUS") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... ingenious"), url=TED_TALKS_FILTER % (id_s, "INGENIOUS") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... fascinating"), url=TED_TALKS_FILTER % (id_s, "FASCINATING") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... inspiring"), url=TED_TALKS_FILTER % (id_s, "INSPIRING") ))
   dir.Append(Function(DirectoryItem(GetTalks, "... beautiful"), url=TED_TALKS_FILTER % (id, "BEAUTIFUL") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "... funny"), url=TED_TALKS_FILTER % (id, "FUNNY") ))
-  dir.Append(Function(DirectoryItem(GetTalks, "... informative"), url=TED_TALKS_FILTER % (id, "INFORMATIVE") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... funny"), url=TED_TALKS_FILTER % (id_s, "FUNNY") ))
+  dir.Append(Function(DirectoryItem(GetTalks, "... informative"), url=TED_TALKS_FILTER % (id_s, "INFORMATIVE") ))
 
   return dir
 
