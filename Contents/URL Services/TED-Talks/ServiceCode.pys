@@ -54,14 +54,12 @@ def PlayVideo(url):
     video_url = TED_BASE + video_url
   except:
     try:
-      yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
-      video_id = re.search('v/(.{11})', yt_url).group(1)
-      video_url = YoutubeUrl(video_id)
+      youtube_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
+      return Redirect(URLService.MediaObjectsForURL(youtube_url))
     except:
       try:
-        yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
-        video_id = re.search('v=(.{11})', yt_url).group(1)
-        video_url = YoutubeUrl(video_id)
+        youtube_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
+        return Redirect(URLService.MediaObjectsForURL(youtube_url))
       except:
         try:
           ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
