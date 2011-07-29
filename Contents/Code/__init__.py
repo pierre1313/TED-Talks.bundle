@@ -158,9 +158,12 @@ def ThemeList(sender):
 
   content = HTML.ElementFromURL(TED_THEMES)
   for theme in content.xpath('//div[@id="maincontent"]//a'):
-    title = theme.text
-    url = TED_BASE + theme.get('href')
-    dir.Append(Function(DirectoryItem(Theme, title=title, thumb=Function(Photo, url=url)), url=url))
+    try:
+      title = theme.text
+      url = TED_BASE + theme.get('href')
+      dir.Append(Function(DirectoryItem(Theme, title=title, thumb=Function(Photo, url=url)), url=url))
+    except:
+      pass
     
   return dir
 
