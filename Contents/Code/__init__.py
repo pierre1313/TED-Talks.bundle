@@ -161,7 +161,7 @@ def ThemeList(sender):
     title = theme.text
     url = TED_BASE + theme.get('href')
     dir.Append(Function(DirectoryItem(Theme, title=title, thumb=Function(Photo, url=url)), url=url))
-
+    
   return dir
 
 ####################################################################################################
@@ -210,29 +210,26 @@ def Tag(sender, url):
   dir = MediaContainer(title2=sender.itemTitle, viewGroup="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
   current_page = HTML.ElementFromURL(url)
   try:
-	  prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
-	  try: 
-		dir.Append(Function(DirectoryItem(Tag, title="Previous Page"), url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')))
-	  except:
-		pass
-	
-	  for item in HTML.ElementFromURL(url).xpath("//dl[@class='clearfix']"):
-		title = item.xpath('./dd//a')[0].text
-		url = TED_BASE + item.xpath('./dd//a')[0].get('href')
-		summary= None
-		date = None
-		try:
-		  thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
-		except:
-		  thumb = None
-	
-		dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
-	
-	  nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
-	  try: 
-		dir.Append(Function(DirectoryItem(Tag, title="Next Page"), url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')))
-	  except:
-		pass
+    prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
+    try: 
+      dir.Append(Function(DirectoryItem(Tag, title="Previous Page"), url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')))
+    except:
+      pass
+    for item in HTML.ElementFromURL(url).xpath("//dl[@class='clearfix']"):
+      title = item.xpath('./dd//a')[0].text
+      url = TED_BASE + item.xpath('./dd//a')[0].get('href')
+      summary= None
+      date = None
+      try:
+	thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
+      except:
+	thumb = None
+      dir.Append(Function(VideoItem(PlayVideo, title=title, subtitle=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
+      nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
+      try: 
+	dir.Append(Function(DirectoryItem(Tag, title="Next Page"), url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')))
+      except:
+	pass
   except:
     pass    
   if len(dir) == 0 :
@@ -270,26 +267,29 @@ def GetTalks(sender, url):
 def PlayVideo(sender, url):
   video_url = None
 
-  try:
-    video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
-    video_url = TED_BASE + video_url
-  except:
-    try:
-      yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
-      video_id = re.search('v/(.{11})', yt_url).group(1)
-      video_url = YoutubeUrl(video_id)
-    except:
-      try:
-        yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
-        video_id = re.search('v=(.{11})', yt_url).group(1)
-        video_url = YoutubeUrl(video_id)
-      except:
-        try:
-          ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
-          video_url = re.search('vu=(http://video.ted.com.*?flv)', HTML.StringFromElement(ted_streaming_el)).group(1)
-        except:
-          Log(HTTP.Request(url).content)
-          pass
+  videoList = HTML.ElementFromURL(url, cacheTime=7200, errors='ignore')
+  
+  video_url = videoList.xpath('.//dl[@class="downloads"]/dt/a')[2].get('href')
+  #try:
+  #  video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
+  #  video_url = TED_BASE + video_url
+  #except:
+  #  try:
+  #    yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
+  #    video_id = re.search('v/(.{11})', yt_url).group(1)
+  #    video_url = YoutubeUrl(video_id)
+  #  except:
+  #    try:
+  #      yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
+  #      video_id = re.search('v=(.{11})', yt_url).group(1)
+  #      video_url = YoutubeUrl(video_id)
+  #    except:
+  #      try:
+  #        ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
+  #        video_url = re.search('vu=(http://video.ted.com.*?flv)', HTML.StringFromElement(ted_streaming_el)).group(1)
+  #      except:
+  #       Log(HTTP.Request(url).content)
+  #        pass
 
   return Redirect(video_url)
 
