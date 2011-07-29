@@ -272,27 +272,25 @@ def PlayVideo(sender, url):
 
   videoList = HTML.ElementFromURL(url, cacheTime=7200, errors='ignore')
   
-  video_url = videoList.xpath('.//dl[@class="downloads"]/dt/a')[2].get('href')
-  #try:
-  #  video_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//dl[@class="downloads"]//dt/a[contains(text(),"Watch")]')[0].get('href')
-  #  video_url = TED_BASE + video_url
-  #except:
-  #  try:
-  #    yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
-  #    video_id = re.search('v/(.{11})', yt_url).group(1)
-  #    video_url = YoutubeUrl(video_id)
-  #  except:
-  #    try:
-  #      yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
-  #      video_id = re.search('v=(.{11})', yt_url).group(1)
-  #      video_url = YoutubeUrl(video_id)
-  #    except:
-  #      try:
-  #        ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
-  #        video_url = re.search('vu=(http://video.ted.com.*?flv)', HTML.StringFromElement(ted_streaming_el)).group(1)
-  #      except:
-  #       Log(HTTP.Request(url).content)
-  #        pass
+  try:
+    video_url = videoList.xpath('.//dl[@class="downloads"]/dt/a')[2].get('href')
+  except:
+    try:
+      yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
+      video_id = re.search('v/(.{11})', yt_url).group(1)
+      video_url = YoutubeUrl(video_id)
+    except:
+      try:
+        yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
+        video_id = re.search('v=(.{11})', yt_url).group(1)
+        video_url = YoutubeUrl(video_id)
+      except:
+        try:
+          ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
+          video_url = re.search('vu=(http://video.ted.com.*?flv)', HTML.StringFromElement(ted_streaming_el)).group(1)
+        except:
+	  Log(HTTP.Request(url).content)
+	  pass
 
   return Redirect(video_url)
 
