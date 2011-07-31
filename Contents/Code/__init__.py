@@ -289,7 +289,7 @@ def PlayVideo(sender, url):
           ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
           video_url = re.search('vu=(http://video.ted.com.*?flv)', HTML.StringFromElement(ted_streaming_el)).group(1)
         except:
-	  Log(HTTP.Request(url).content)
+	  #Log(HTTP.Request(url).content)
 	  pass
 
   return Redirect(video_url)
@@ -353,5 +353,5 @@ def YoutubeUrl(video_id, quality='1080p'):
         fmt = 5
 
   url = (fmts_info[str(fmt)]).decode('unicode_escape')
-  Log("  VIDEO URL --> " + url)
+  #Log("  VIDEO URL --> " + url)
   return url
