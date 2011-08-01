@@ -66,24 +66,30 @@ def SpeakersAZ(name):
 def SpeakersList(char, page=1):
   oc = ObjectContainer(title2=char, view_group="List")
 
-  content = HTML.ElementFromURL(TED_SPEAKERS % (page), cacheTime=CACHE_1WEEK)
+  i = page
+  content = HTML.ElementFromURL(TED_SPEAKERS % (i), cacheTime=CACHE_1WEEK)
+  
+  while len(content.xpath('//a[@class="next"]')) > 0:
+    content = HTML.ElementFromURL(TED_SPEAKERS % (i), cacheTime=CACHE_1WEEK)
+    letter_list = content.xpath('//h3[text()="' + char + '"]/following-sibling::ul')
+    i = i+1
+    if len(letter_list) == 1:
+      for speaker in letter_list[0].xpath('./li/a'):
+        speaker_name = speaker.text.split(" ", 1)
+        speaker_name.reverse()
+        speaker_name = ", ".join(speaker_name)
+        speaker_name = speaker_name.strip(", ")
+        url = TED_BASE + speaker.get('href')
 
-  letter_list = content.xpath('//h3[text()="' + char + '"]/following-sibling::ul')
-  if len(letter_list) == 1:
-    for speaker in letter_list[0].xpath('./li/a'):
-      speaker_name = speaker.text.split(" ", 1)
-      speaker_name.reverse()
-      speaker_name = ", ".join(speaker_name)
-      speaker_name = speaker_name.strip(", ")
-      url = TED_BASE + speaker.get('href')
+        oc.add(DirectoryObject(key=Callback(SpeakerTalks, name=speaker_name, url=url), title=speaker_name, thumb=Callback(Photo, url=url)))
 
-      oc.add(DirectoryObject(key=Callback(SpeakerTalks, name=speaker_name, url=url), title=speaker_name, thumb=Callback(Photo, url=url)))
+    #if len( content.xpath('//a[@class="next"]') ) > 0:
+      #oc.add(DirectoryObject(key=Callback(SpeakersList, char=char, page=page+1), title="Next page"))
+    # oc.extend(SpeakersList(char=char, page=page+1))
 
-    if len( content.xpath('//a[@class="next"]') ) > 0:
-      oc.Extend(SpeakersList(char, page=page+1))
-
-  elif len( content.xpath('//a[@class="next"]') ) > 0:
-    oc = SpeakersList(char, page=page+1)
+  #elif len( content.xpath('//a[@class="next"]') ) > 0:
+  #  oc = SpeakersList(char, page=page+1)
+  #  pass
 
   if len(oc) == 0:
     return MessageContainer("Empty", "There aren't any speakers whose name starts with " + char)
@@ -93,7 +99,7 @@ def SpeakersList(char, page=1):
 ####################################################################################################
 
 def SpeakerTalks(name, url):
-  oc = ObjectContainer(title2=name,httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+  oc = ObjectContainer(title2=name)
 
   content = HTML.ElementFromURL(url).xpath('//dl[@class="box clearfix"]')
   for talk in content:
@@ -103,10 +109,9 @@ def SpeakerTalks(name, url):
     duration = CalculateDuration(timecode)
     date = Datetime.ParseDate(talk.xpath('.//em')[0].text.split(" Posted: ")[1]).date()
     thumb = talk.xpath('.//img')[1].get('src')
-  ########### Confrim proper way to add VideoObjects ########
-    oc.add(Function(VideoItem(PlayVideo, title=title, originally_available_at=date, duration=duration, thumb=Function(Thumb, url=thumb)), url=url))
+    oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, duration=duration, thumb=Function(Thumb, url=thumb)))
 
-  if len(dir) == 0 :
+  if len(oc) == 0 :
     return MessageContainer("Empty", "This category is empty")
   else:
     return oc
@@ -146,7 +151,7 @@ def FrontPageSort(name, id):
   oc.add(DirectoryObject(key=Callback(GetTalks, name="... fascinating", url=TED_TALKS_FILTER % (id_s, "FASCINATING")), title="... fascinating"))
   oc.add(DirectoryObject(key=Callback(GetTalks, name="... inspiring", url=TED_TALKS_FILTER % (id_s, "INSPIRING")), title="... inspiring"))
   oc.add(DirectoryObject(key=Callback(GetTalks, name="... beautiful", url=TED_TALKS_FILTER % (id, "BEAUTIFUL")), title="... beautiful"))
-  oc.add(DirectoryObject(key=Callback(GetTalks, name="... funny", rl=TED_TALKS_FILTER % (id_s, "FUNNY")), title="... funny"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... funny", url=TED_TALKS_FILTER % (id_s, "FUNNY")), title="... funny"))
   oc.add(DirectoryObject(key=Callback(GetTalks, name="... informative", url=TED_TALKS_FILTER % (id_s, "INFORMATIVE")), title="... informative"))
 
   return oc
@@ -161,7 +166,7 @@ def ThemeList(name):
     try:
       title = theme.text
       url = TED_BASE + theme.get('href')
-      oc.add(key=Callback(DirectoryObject(Theme, name=title, url=url), title=title, thumb=Callback(Photo, url=url)))
+      oc.add(DirectoryObject(key=Callback(Theme, name=title, url=url), title=title, thumb=Callback(Photo, url=url)))
     except:
       pass
     
@@ -170,7 +175,7 @@ def ThemeList(name):
 ####################################################################################################
 
 def Theme(name, url):
-  oc = ObjectContainer(title2=name, view_group="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+  oc = ObjectContainer(title2=name, view_group="List")
   try:
     rss_url = HTML.ElementFromURL(url).xpath('//link[@rel="alternate"]')[0].get('href')
     content = XML.ElementFromURL(rss_url, errors='ignore')
@@ -186,10 +191,9 @@ def Theme(name, url):
       thumb = item.xpath('./media:thumbnail', namespaces=MEDIA_NS)[0].get('url')
     except:
       thumb = None
-  ########### Confrim proper way to add VideoObjects ########
-    oc.add(Function(VideoItem(PlayVideo, title=title, originally_available_at=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
+    oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, summary=summary, thumb=Callback(Thumb, url=thumb)))
 
-  if len(dir) == 0 :
+  if len(oc) == 0 :
     return MessageContainer("Empty", "This category is empty")
   else:
     return oc
@@ -203,19 +207,19 @@ def TagsList(name):
   for tag in content.xpath('//div[@id="maincontent"]//a'):
     title = tag.text
     url = TED_BASE + tag.get('href')
-    oc.add(key=Callback(DirectoryObject(Tag, name=title, url=url), title=title))
+    oc.add(DirectoryObject(key=Callback(Tag, name=title, url=url), title=title))
 
   return oc
 
 ####################################################################################################
 
 def Tag(name, url):
-  oc = ObjectContainer(title2=name, view_group="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+  oc = ObjectContainer(title2=name, view_group="List", http_cookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
   current_page = HTML.ElementFromURL(url)
   try:
     prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
     try: 
-      oc.add(Function(DirectoryObject(Tag, title="Previous Page"), url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')))
+      oc.add(DirectoryObject(key=Callback(Tag, name=name, url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')), title="Previous Page"))
     except:
       pass
     for item in HTML.ElementFromURL(url).xpath("//dl[@class='clearfix']"):
@@ -227,11 +231,10 @@ def Tag(name, url):
 	thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
       except:
 	thumb = None
-      ########### Confrim proper way to add VideoObjects ########
-      oc.add(Function(VideoItem(PlayVideo, title=title, originally_available_at=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
+      oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, summary=summary, thumb=Callback(Thumb, url=thumb)))
       nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
       try: 
-	oc.add(key=Callback(DirectoryObject(Tag, name=name, url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')), title="Next Page"))
+	oc.add(DirectoryObject(key=Callback(Tag, name=name, url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')), title="Next Page"))
       except:
 	pass
   except:
@@ -244,9 +247,9 @@ def Tag(name, url):
 ####################################################################################################    
 
 def GetTalks(name, url):
-  oc = ObjectContainer(title2=name)
+  oc = ObjectContainer(title2=name, http_cookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
 
-  talks = JSON.ObjectFromURL(url, headers={'cookies': HTTP.GetCookiesForURL('http://www.youtube.com/')})['main']
+  talks = JSON.ObjectFromURL(url)['main']
   for talk in talks:
     title = talks[str(talk)]['tTitle']
     date = Datetime.ParseDate(talks[str(talk)]['talkpDate']).date() # Post date
