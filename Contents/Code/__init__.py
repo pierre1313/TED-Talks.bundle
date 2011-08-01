@@ -32,7 +32,7 @@ def Start():
 
   ObjectContainer.art       = R(TED_ART)
   ObjectContainer.title1    = PLUGIN_TITLE
-  objectContainer.view_group = "InfoList"
+  ObjectContainer.view_group = "InfoList"
   DirectoryObject.thumb      = R(TED_THUMB)
 
   HTTP.CacheTime = CACHE_1DAY
@@ -43,28 +43,28 @@ def Start():
 def VideoMainMenu():
   oc = ObjectContainer(view_group="List")
 
-  oc.add(Function(DirectoryObject(FrontPageList, "Front Page")))
-  oc.add(Function(DirectoryObject(ThemeList, "Themes")))
-  oc.add(Function(DirectoryObject(TagsList, "Tags")))
-  oc.add(Function(DirectoryObject(SpeakersAZ, "Speakers")))
+  oc.add(DirectoryObject(key=Callback(FrontPageList, name="Front Page"), title="Front Page"))
+  oc.add(DirectoryObject(key=Callback(ThemeList, name="Themes"), title="Themes"))
+  oc.add(DirectoryObject(key=Callback(TagsList, name="Tags"), title="Tags"))
+  oc.add(DirectoryObject(key=Callback(SpeakersAZ, name="Speakers"), title="Speakers"))
 
   return oc
 
 ####################################################################################################
 
-def SpeakersAZ(sender):
-  oc = ObjectContainer(title2=sender.itemTitle, view_group="List")
+def SpeakersAZ(name):
+  oc = ObjectContainer(title2=name, view_group="List")
 
   # A to Z
   for char in list(ascii_uppercase):
-    oc.add(Function(DirectoryObject(SpeakersList, title=char), char=char))
+    oc.add(DirectoryObject(key=Callback(SpeakersList, char=char), title=char))
 
   return oc
 
 ####################################################################################################
 
-def SpeakersList(sender, char, page=1):
-  oc = ObjectContainer(title2=sender.itemTitle, view_group="List")
+def SpeakersList(char, page=1):
+  oc = ObjectContainer(title2=char, view_group="List")
 
   content = HTML.ElementFromURL(TED_SPEAKERS % (page), cacheTime=CACHE_1WEEK)
 
@@ -77,13 +77,13 @@ def SpeakersList(sender, char, page=1):
       speaker_name = speaker_name.strip(", ")
       url = TED_BASE + speaker.get('href')
 
-      oc.add(Function(DirectoryObject(SpeakerTalks, title=speaker_name, thumb=Function(Photo, url=url)), url=url))
+      oc.add(DirectoryObject(key=Callback(SpeakerTalks, name=speaker_name, url=url), title=speaker_name, thumb=Callback(Photo, url=url)))
 
     if len( content.xpath('//a[@class="next"]') ) > 0:
-      oc.Extend(SpeakersList(sender, char, page=page+1))
+      oc.Extend(SpeakersList(char, page=page+1))
 
   elif len( content.xpath('//a[@class="next"]') ) > 0:
-    oc = SpeakersList(sender, char, page=page+1)
+    oc = SpeakersList(char, page=page+1)
 
   if len(oc) == 0:
     return MessageContainer("Empty", "There aren't any speakers whose name starts with " + char)
@@ -92,8 +92,8 @@ def SpeakersList(sender, char, page=1):
 
 ####################################################################################################
 
-def SpeakerTalks(sender, url):
-  oc = ObjectContainer(title2=sender.itemTitle,httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+def SpeakerTalks(name, url):
+  oc = ObjectContainer(title2=name,httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
 
   content = HTML.ElementFromURL(url).xpath('//dl[@class="box clearfix"]')
   for talk in content:
@@ -113,55 +113,55 @@ def SpeakerTalks(sender, url):
 
 ####################################################################################################
 
-def FrontPageList(sender):
-  oc = ObjectContainer(title2=sender.itemTitle, view_group="List")
+def FrontPageList(name):
+  oc = ObjectContainer(title2=name, view_group="List")
 
-  oc.add(Function(DirectoryObject(FrontPageSort, "Technology"), id=20))
-  oc.add(Function(DirectoryObject(FrontPageSort, "Entertainment"), id=25))
-  oc.add(Function(DirectoryObject(FrontPageSort, "Design"), id=26))
-  oc.add(Function(DirectoryObject(FrontPageSort, "Business"), id=21))
-  oc.add(Function(DirectoryObject(FrontPageSort, "Science"), id=24))
-  oc.add(Function(DirectoryObject(FrontPageSort, "Global issues"), id=28))
-  oc.add(Function(DirectoryObject(FrontPageSort, "All"), id=None))
+  oc.add(DirectoryObject(key=Callback(FrontPageSort, name="Technology", id=20), title="Technology"))
+  oc.add(DirectoryObject(key=Callback(FrontPageSort, name="Entertainment", id=25), title="Entertainment"))
+  oc.add(DirectoryObject(key=Callback(FrontPageSort, name="Design", id=26), title="Design"))
+  oc.add(DirectoryObject(key=Callback(FrontPageSort, name="Business", id=21), title="Business"))
+  oc.add(DirectoryObject(key=Callback(FrontPageSort, name="Science", id=24), title="Science"))
+  oc.add(DirectoryObject(key=Callback(FrontPageSort, name="Global issues", id=28), title="Global issues"))
+  oc.add(DirectoryObject(key=Callback(FrontPageSort, name="All", id=None), title="All"))
 
   return oc
 
 ####################################################################################################
 
-def FrontPageSort(sender, id):
-  oc = MediaContainer(title2=sender.itemTitle, view_group="List")
+def FrontPageSort(name, id):
+  oc = ObjectContainer(title2=name, view_group="List")
   if id == None:
     id_s = ''
   else:
     id_s = str(id)
     
-  oc.add(Function(DirectoryObject(GetTalks, "Newest releases"), url=TED_TALKS_FILTER % (id_s, "NEWEST") ))
-  oc.add(Function(DirectoryObject(GetTalks, "Most languages"), url=TED_TALKS_FILTER % (id_s, "MOSTTRANSLATED") ))
-  oc.add(Function(DirectoryObject(GetTalks, "Most emailed this week"), url=TED_TALKS_FILTER % (id_s, "MOSTEMAILED") ))
-  oc.add(Function(DirectoryObject(GetTalks, "Most comments this week"), url=TED_TALKS_FILTER % (id_s, "MOSTDISCUSSED") ))
-  oc.add(Function(DirectoryObject(GetTalks, "Rated jaw-dropping"), url=TED_TALKS_FILTER % (id_s, "JAW-DRAPPING") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... persuasive"), url=TED_TALKS_FILTER % (id_s, "PERSUASIVE") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... courageous"), url=TED_TALKS_FILTER % (id_s, "COURAGEOUS") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... ingenious"), url=TED_TALKS_FILTER % (id_s, "INGENIOUS") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... fascinating"), url=TED_TALKS_FILTER % (id_s, "FASCINATING") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... inspiring"), url=TED_TALKS_FILTER % (id_s, "INSPIRING") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... beautiful"), url=TED_TALKS_FILTER % (id, "BEAUTIFUL") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... funny"), url=TED_TALKS_FILTER % (id_s, "FUNNY") ))
-  oc.add(Function(DirectoryObject(GetTalks, "... informative"), url=TED_TALKS_FILTER % (id_s, "INFORMATIVE") ))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="Newest releases", url=TED_TALKS_FILTER % (id_s, "NEWEST")), title="Newest releases"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="Most languages", url=TED_TALKS_FILTER % (id_s, "MOSTTRANSLATED")), title="Most languages"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="Most emailed this week", url=TED_TALKS_FILTER % (id_s, "MOSTEMAILED")), title="Most emailed this week"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="Most comments this week", url=TED_TALKS_FILTER % (id_s, "MOSTDISCUSSED")), title="Most comments this week"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="Rated jaw-dropping", url=TED_TALKS_FILTER % (id_s, "JAW-DRAPPING")), title="Rated jaw-dropping"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... persuasive", url=TED_TALKS_FILTER % (id_s, "PERSUASIVE")), title="... persuasive"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... courageous", url=TED_TALKS_FILTER % (id_s, "COURAGEOUS")), title="... courageous"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... ingenious", url=TED_TALKS_FILTER % (id_s, "INGENIOUS")), title="... ingenious"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... fascinating", url=TED_TALKS_FILTER % (id_s, "FASCINATING")), title="... fascinating"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... inspiring", url=TED_TALKS_FILTER % (id_s, "INSPIRING")), title="... inspiring"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... beautiful", url=TED_TALKS_FILTER % (id, "BEAUTIFUL")), title="... beautiful"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... funny", rl=TED_TALKS_FILTER % (id_s, "FUNNY")), title="... funny"))
+  oc.add(DirectoryObject(key=Callback(GetTalks, name="... informative", url=TED_TALKS_FILTER % (id_s, "INFORMATIVE")), title="... informative"))
 
   return oc
 
 ####################################################################################################
 
-def ThemeList(sender):
-  oc = ObjectContainer(title2=sender.itemTitle, view_group="List")
+def ThemeList(name):
+  oc = ObjectContainer(title2=name, view_group="List")
 
   content = HTML.ElementFromURL(TED_THEMES)
   for theme in content.xpath('//div[@id="maincontent"]//a'):
     try:
       title = theme.text
       url = TED_BASE + theme.get('href')
-      oc.add(Function(DirectoryObject(Theme, title=title, thumb=Function(Photo, url=url)), url=url))
+      oc.add(key=Callback(DirectoryObject(Theme, name=title, url=url), title=title, thumb=Callback(Photo, url=url)))
     except:
       pass
     
@@ -169,8 +169,8 @@ def ThemeList(sender):
 
 ####################################################################################################
 
-def Theme(sender, url):
-  oc = ObjectContainer(title2=sender.itemTitle, view_group="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+def Theme(name, url):
+  oc = ObjectContainer(title2=name, view_group="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
   try:
     rss_url = HTML.ElementFromURL(url).xpath('//link[@rel="alternate"]')[0].get('href')
     content = XML.ElementFromURL(rss_url, errors='ignore')
@@ -196,21 +196,21 @@ def Theme(sender, url):
 
 ####################################################################################################
 
-def TagsList(sender):
-  oc = ObjectContainer(title2=sender.itemTitle, view_group="List")
+def TagsList(name):
+  oc = ObjectContainer(title2=name, view_group="List")
 
   content = HTML.ElementFromURL(TED_TAGS)
   for tag in content.xpath('//div[@id="maincontent"]//a'):
     title = tag.text
     url = TED_BASE + tag.get('href')
-    oc.add(Function(DirectoryObject(Tag, title=title), url=url))
+    oc.add(key=Callback(DirectoryObject(Tag, name=title, url=url), title=title))
 
   return oc
 
 ####################################################################################################
 
-def Tag(sender, url):
-  oc = ObjectContainer(title2=sender.itemTitle, view_group="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+def Tag(name, url):
+  oc = ObjectContainer(title2=name, view_group="List",httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
   current_page = HTML.ElementFromURL(url)
   try:
     prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
@@ -231,7 +231,7 @@ def Tag(sender, url):
       oc.add(Function(VideoItem(PlayVideo, title=title, originally_available_at=date, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
       nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
       try: 
-	oc.add(Function(DirectoryObject(Tag, title="Next Page"), url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')))
+	oc.add(key=Callback(DirectoryObject(Tag, name=name, url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')), title="Next Page"))
       except:
 	pass
   except:
@@ -243,13 +243,13 @@ def Tag(sender, url):
 
 ####################################################################################################    
 
-def GetTalks(sender, url):
-  oc = ObjectContainer(title2=sender.itemTitle,httpCookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+def GetTalks(name, url):
+  oc = ObjectContainer(title2=name)
 
-  talks = JSON.ObjectFromURL(url)['main']
+  talks = JSON.ObjectFromURL(url, headers={'cookies': HTTP.GetCookiesForURL('http://www.youtube.com/')})['main']
   for talk in talks:
     title = talks[str(talk)]['tTitle']
-    date = Datetime.ParseDate(talks[str(talk)]['talkpDate']).daet() # Post date
+    date = Datetime.ParseDate(talks[str(talk)]['talkpDate']).date() # Post date
     if talks[str(talk)]['altTitle'] != talks[str(talk)]['tTitle']:
       summary = String.StripTags( talks[str(talk)]['altTitle'] + '\n\n' + talks[str(talk)]['blurb'] )
     else:
@@ -259,48 +259,12 @@ def GetTalks(sender, url):
     thumb = str(talks[str(talk)]['image']) + "_240x180.jpg"
     url = TED_BASE + talks[str(talk)]['talkLink']
 
-    dir.Append(Function(VideoItem(PlayVideo, title=title, originally_available_at=date, duration=duration, summary=summary, thumb=Function(Thumb, url=thumb)), url=url))
+    oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, duration=duration, summary=summary, thumb=Callback(Thumb, url=thumb)))
   
   if len(oc) == 0 :
     return MessageContainer("Empty", "This category is empty")
   else:
     return oc
-
-####################################################################################################
-
-
-######## Implement URL Service Call(s) ########
-def PlayVideo(sender, url):
-  video_url = None
-
-  videoList = HTML.ElementFromURL(url, cacheTime=7200, errors='ignore')
-  
-  try:
-    video_url = videoList.xpath('.//dl[@class="downloads"]/dt/a')[2].get('href')
-  except:
-    try:
-      yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//embed[contains(@src, "youtube.com")]')[0].get('src')
-      video_id = re.search('v/(.{11})', yt_url).group(1)
-      video_url = YoutubeUrl(video_id)
-    except:
-      try:
-        yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//a[contains(@href, "youtube.com")]')[0].get('href')
-        video_id = re.search('v=(.{11})', yt_url).group(1)
-        video_url = YoutubeUrl(video_id)
-      except:
-        try:
-          ted_streaming_el = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath("//div[@class='save clearfix']")[0]
-          video_url = re.search('vu=(http://video.ted.com.*?flv)', HTML.StringFromElement(ted_streaming_el)).group(1)
-        except:
-	  try:
-	    yt_url = HTML.ElementFromURL(url, cacheTime=CACHE_1WEEK).xpath('//param[contains(@value, "youtube.com")]')[0].get('value')
-	    video_id = re.search('v/(.{11})', yt_url).group(1)
-	    video_url = YoutubeUrl(video_id)
-	  except:
-	    Log(HTTP.Request(url).content)
-	    pass
-
-  return Redirect(video_url)
 
 ####################################################################################################
 
@@ -332,37 +296,4 @@ def CalculateDuration(timecode):
   milliseconds += int( d.group(2) ) * 1000
   return milliseconds
 
-####################################################################################################
-
-def YoutubeUrl(video_id, quality='1080p'):
-  yt_page = HTTP.Request(YT_VIDEO_PAGE % video_id, cacheTime=1).content
-  
-  fmt_url_map = re.findall('"fmt_url_map".+?"([^"]+)', yt_page)[0]
-  fmt_url_map = fmt_url_map.replace('\/', '/').split(',')
-
-  fmts = []
-  fmts_info = {}
-
-  for f in fmt_url_map:
-    (fmt, url) = f.split('|')
-    fmts.append(fmt)
-    fmts_info[str(fmt)] = url
-
-  index = YT_VIDEO_FORMATS.index(quality)
-
-  if YT_FMT[index] in fmts:
-    fmt = YT_FMT[index]
-  else:
-    for i in reversed( range(0, index+1) ):
-      if str(YT_FMT[i]) in fmts:
-        fmt = YT_FMT[i]
-        break
-      else:
-        fmt = 5
-
-  url = (fmts_info[str(fmt)]).decode('unicode_escape')
-  Log("  VIDEO URL --> " + url)
-  return url
-
-####################################################################################################
 
