@@ -109,8 +109,8 @@ def SpeakerTalks(name, url):
     duration = CalculateDuration(timecode)
     date = Datetime.ParseDate(talk.xpath('.//em')[0].text.split(" Posted: ")[1]).date()
     thumb = talk.xpath('.//img')[1].get('src')
-    oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, duration=duration, thumb=Function(Thumb, url=thumb)))
-
+    oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, duration=duration, thumb=Callback(Thumb, url=thumb)))
+  
   if len(oc) == 0 :
     return MessageContainer("Empty", "This category is empty")
   else:
