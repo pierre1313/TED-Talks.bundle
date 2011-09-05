@@ -214,7 +214,7 @@ def TagsList(name):
 ####################################################################################################
 
 def Tag(name, url):
-  oc = ObjectContainer(title2=name, view_group="List", http_cookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+  oc = ObjectContainer(title2=name, view_group="List")
   current_page = HTML.ElementFromURL(url)
   try:
     prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
@@ -247,7 +247,7 @@ def Tag(name, url):
 ####################################################################################################    
 
 def GetTalks(name, url):
-  oc = ObjectContainer(title2=name, http_cookies=HTTP.GetCookiesForURL('http://www.youtube.com/'))
+  oc = ObjectContainer(title2=name)
 
   talks = JSON.ObjectFromURL(url)['main']
   for talk in talks:
