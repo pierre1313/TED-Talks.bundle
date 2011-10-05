@@ -3,43 +3,32 @@ from string import ascii_uppercase
 
 ###################################################################################################
 
-PLUGIN_TITLE     = "TED talks"
-VIDEO_PREFIX     = "/video/TED"
-
+PLUGIN_TITLE     = "TED Talks"
 TED_BASE         = "http://www.ted.com"
 TED_TALKS_FILTER = "http://www.ted.com/talks/browse.json?tagid=%s&orderedby=%s"
 TED_THEMES       = "http://www.ted.com/themes/atoz"
 TED_TAGS         = "http://www.ted.com/talks/tags"
 TED_SPEAKERS     = "http://www.ted.com/speakers/atoz/page/%d"
-
 MEDIA_NS         = {'media':'http://search.yahoo.com/mrss/'}
 
-YT_VIDEO_PAGE    = "http://www.youtube.com/watch?v=%s"
-YT_GET_VIDEO_URL = "http://www.youtube.com/get_video?video_id=%s&t=%s&fmt=%d&asv=3"
-YT_VIDEO_FORMATS = ['Standard', 'Medium', 'High', '720p', '1080p']
-YT_FMT           = [34, 18, 35, 22, 37]
-
-# Default artwork and icon(s)
-TED_ART          = "art-default.jpg"
-TED_THUMB        = "icon-default.jpg"
+ART_DEFAULT      = "art-default.jpg"
+ICON_DEFAULT     = "icon-default.jpg"
 
 ###################################################################################################
-
 def Start():
-  Plugin.AddPrefixHandler(VIDEO_PREFIX, VideoMainMenu, PLUGIN_TITLE, TED_THUMB, TED_ART)
+  Plugin.AddPrefixHandler("/video/ted", VideoMainMenu, PLUGIN_TITLE, ICON_DEFAULT, ART_DEFAULT)
   Plugin.AddViewGroup("InfoList", viewMode="InfoList", mediaType="items")
   Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
 
-  ObjectContainer.art       = R(TED_ART)
-  ObjectContainer.title1    = PLUGIN_TITLE
+  ObjectContainer.art        = R(ART_DEFAULT)
+  ObjectContainer.title1     = PLUGIN_TITLE
   ObjectContainer.view_group = "InfoList"
-  DirectoryObject.thumb      = R(TED_THUMB)
+  DirectoryObject.thumb      = R(ICON_DEFAULT)
 
   HTTP.CacheTime = CACHE_1DAY
-  HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.12) Gecko/20101026 Firefox/3.6.12"
+  HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:7.0.1) Gecko/20100101 Firefox/7.0.1"
 
 ####################################################################################################
-
 def VideoMainMenu():
   oc = ObjectContainer(view_group="List")
 
@@ -51,7 +40,6 @@ def VideoMainMenu():
   return oc
 
 ####################################################################################################
-
 def SpeakersAZ(name):
   oc = ObjectContainer(title2=name, view_group="List")
 
@@ -62,7 +50,6 @@ def SpeakersAZ(name):
   return oc
 
 ####################################################################################################
-
 def SpeakersList(char, page=1):
   oc = ObjectContainer(title2=char, view_group="List")
 
@@ -97,7 +84,6 @@ def SpeakersList(char, page=1):
   return oc
 
 ####################################################################################################
-
 def SpeakerTalks(name, url):
   oc = ObjectContainer(title2=name)
 
@@ -105,9 +91,9 @@ def SpeakerTalks(name, url):
   for talk in content:
     title = talk.xpath('.//h4/a')[0].text
     url = TED_BASE + talk.xpath('.//h4/a')[0].get('href')
-    timecode = talk.xpath('.//em')[0].text.split(" Posted: ")[0]
+    timecode = talk.xpath('.//em')[0].text_content().split(" Posted: ")[0]
     duration = CalculateDuration(timecode)
-    date = Datetime.ParseDate(talk.xpath('.//em')[0].text.split(" Posted: ")[1]).date()
+    date = Datetime.ParseDate(talk.xpath('.//em')[0].text_content().split(" Posted: ")[1]).date()
     thumb = talk.xpath('.//img')[1].get('src')
     oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, duration=duration, thumb=Callback(Thumb, url=thumb)))
   
@@ -117,7 +103,6 @@ def SpeakerTalks(name, url):
     return oc
 
 ####################################################################################################
-
 def FrontPageList(name):
   oc = ObjectContainer(title2=name, view_group="List")
 
@@ -132,7 +117,6 @@ def FrontPageList(name):
   return oc
 
 ####################################################################################################
-
 def FrontPageSort(name, id):
   oc = ObjectContainer(title2=name, view_group="List")
   if id == None:
@@ -157,7 +141,6 @@ def FrontPageSort(name, id):
   return oc
 
 ####################################################################################################
-
 def ThemeList(name):
   oc = ObjectContainer(title2=name, view_group="List")
 
@@ -173,9 +156,8 @@ def ThemeList(name):
   return oc
 
 ####################################################################################################
-
 def Theme(name, url):
-  oc = ObjectContainer(title2=name, view_group="List")
+  oc = ObjectContainer(title2=name)
   try:
     rss_url = HTML.ElementFromURL(url).xpath('//link[@rel="alternate"]')[0].get('href')
     content = XML.ElementFromURL(rss_url, errors='ignore')
@@ -199,7 +181,6 @@ def Theme(name, url):
     return oc
 
 ####################################################################################################
-
 def TagsList(name):
   oc = ObjectContainer(title2=name, view_group="List")
 
@@ -212,40 +193,43 @@ def TagsList(name):
   return oc
 
 ####################################################################################################
-
 def Tag(name, url):
-  oc = ObjectContainer(title2=name, view_group="List")
+  oc = ObjectContainer(title2=name)
   current_page = HTML.ElementFromURL(url)
+
   try:
     prevpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
     try: 
       oc.add(DirectoryObject(key=Callback(Tag, name=name, url=TED_BASE + prevpage.xpath(".//a[@class='previous']")[0].get('href')), title="Previous Page"))
     except:
       pass
+
     for item in HTML.ElementFromURL(url).xpath("//dl[@class='clearfix']"):
       title = item.xpath('./dd//a')[0].text
       url = TED_BASE + item.xpath('./dd//a')[0].get('href')
       summary= None
       date = None
       try:
-	thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
+        thumb = item.xpath('./dt//img[@alt="Talk image"]')[0].get('src')
       except:
-	thumb = None
+        thumb = None
+
       oc.add(VideoClipObject(url=url, title=title, originally_available_at=date, summary=summary, thumb=Callback(Thumb, url=thumb)))
-      nextpage = current_page.xpath("//div[@class='pagination clearfix']")[0]
-      try: 
-	oc.add(DirectoryObject(key=Callback(Tag, name=name, url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')), title="Next Page"))
-      except:
-	pass
+
+    try:
+	  oc.add(DirectoryObject(key=Callback(Tag, name=name, url=TED_BASE + prevpage.xpath(".//a[@class='next']")[0].get('href')), title="Next Page"))
+    except:
+      pass
+
   except:
     pass    
+
   if len(oc) == 0 :
     return MessageContainer("Empty", "This category is empty")
   else:
     return oc
 
 ####################################################################################################    
-
 def GetTalks(name, url):
   oc = ObjectContainer(title2=name)
 
@@ -270,17 +254,15 @@ def GetTalks(name, url):
     return oc
 
 ####################################################################################################
-
 def Photo(url):
   try:
     photo_url = HTML.ElementFromURL(url).xpath('//link[@rel="image_src"]')[0].get('href')
     data = HTTP.Request(photo_url, cacheTime=CACHE_1MONTH).content
     return DataObject(data, 'image/jpeg')
   except:
-    return Redirect(R(TED_THUMB))
+    return Redirect(R(ICON_DEFAULT))
 
 ####################################################################################################
-
 def Thumb(url):
   if url:
     try:
@@ -288,15 +270,12 @@ def Thumb(url):
       return DataObject(data, 'image/jpeg')
     except:
       pass
-  return Redirect(R(TED_THUMB))
+  return Redirect(R(ICON_DEFAULT))
 
 ####################################################################################################
-
 def CalculateDuration(timecode):
   milliseconds = 0
   d = re.search('([0-9]{1,2}):([0-9]{2})', timecode)
   milliseconds += int( d.group(1) ) * 60 * 1000
   milliseconds += int( d.group(2) ) * 1000
   return milliseconds
-
-
